@@ -528,7 +528,8 @@
             })
             .then((data) => {
               if (data.response) {
-                appendMessage("bot", data.response);
+                console.log("response got");
+                appendMessage("bot", data.response, data.audio_url);
               } else {
                 appendMessage("bot", "Sorry, I couldn't understand that.");
               }
@@ -545,7 +546,7 @@
         }
       }
 
-      function appendMessage(sender, message) {
+      function appendMessage(sender, message, audioUrl = null) {
         const chatContainer = document.getElementById("chat-messages");
         const messageElement = document.createElement("div");
         messageElement.classList.add(
@@ -554,10 +555,18 @@
         );
         messageElement.textContent = message;
         chatContainer.appendChild(messageElement);
+
+        // Check if there's an audio response and add it to the chat
+        if (audioUrl) {
+          const audioElement = document.createElement("audio");
+          audioElement.controls = true;
+          audioElement.src = audioUrl;
+          chatContainer.appendChild(audioElement);
+        }
+
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
 
-      // Initialize the home page
       showHome();
     </script>
   </body>

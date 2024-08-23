@@ -12,18 +12,6 @@ from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from flask_cors import CORS
 import datetime
-from gtts import gTTS
-import os
-
-def generate_speech_gtts(text, filename="output.mp3"):
-    tts = gTTS(text=text, lang='en', slow=False)
-    tts.save(filename)
-    return filename
-
-# Example usage
-text_response = "My name is AVM-Assistant, at your service! 🌟"
-audio_file = generate_speech_gtts(text_response)
-print(f"Generated audio file: {audio_file}")
 
 
 # Initialize the Flask app
@@ -336,20 +324,14 @@ def chat():
         })
     
         response = result["answer"]
-        print("hereee")
+    
         # Adjust the response to reflect the bot's personality and include traits
-        response_with_personality = add_personality_to_response(response, "professional")
+        response_with_personality = add_personality_to_response(response, "humorous")
     
     chat_history.append((user_input, response_with_personality))
-    print(">>>>>>>",response_with_personality)
-     # Generate audio response
-    # audio_filename = generate_speech_gtts(response_with_personality)
-
-    # Return both text and audio responses
-    return jsonify({
-        "response": response_with_personality,
-        # "audio_url": request.host_url + audio_filename
-    }), 200
+    print(response_with_personality)
+    
+    return jsonify({"response": response_with_personality}), 200
 
     
 

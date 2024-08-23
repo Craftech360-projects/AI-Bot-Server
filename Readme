@@ -1,0 +1,205 @@
+## **Project Documentation: Conversational Retrieval Chatbot**
+
+### **Table of Contents**
+
+1. [Introduction](#introduction)
+2. [Project Structure](#project-structure)
+3. [Prerequisites](#prerequisites)
+4. [Setup Instructions](#setup-instructions)
+5. [Environment Variables](#environment-variables)
+6. [File Upload and Processing Workflow](#file-upload-and-processing-workflow)
+7. [Chat Workflow](#chat-workflow)
+8. [API Endpoints](#api-endpoints)
+9. [Testing the Application](#testing-the-application)
+10. [Troubleshooting](#troubleshooting)
+11. [Conclusion](#conclusion)
+
+---
+
+### **1. Introduction**
+
+The Conversational Retrieval Chatbot is an AI-powered system that allows users to interact with a chatbot that can retrieve and respond with relevant information from a set of documents uploaded by an admin. The project leverages LangChain, Hugging Face models, and a custom retrieval mechanism to provide context-aware responses based on document embeddings stored in a vector database.
+
+---
+
+### **2. Project Structure**
+
+```
+conversational_retrieval_chatbot/
+│
+├── app.py                   # Main Flask server code
+├── create_sample_data.py    # Script to create sample text files
+├── create_sample_docx.py    # Script to create sample DOCX files
+├── .env                     # Environment variables file (not included in version control)
+├── requirements.txt         # List of dependencies
+├── templates/               # Directory for HTML templates (if using Flask for frontend)
+│   └── index.html           # Main HTML file for the web interface
+└── sample_data/             # Directory to hold sample files for upload
+    ├── world_war_ii.txt     # Sample text file on World War II
+    └── sample_document.docx # Sample DOCX file
+```
+
+---
+
+### **3. Prerequisites**
+
+Before setting up the project, ensure you have the following installed:
+
+- Python 3.8 or higher
+- pip (Python package installer)
+- Git (optional, for version control)
+
+---
+
+### **4. Setup Instructions**
+
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/yourusername/conversational_retrieval_chatbot.git
+   cd conversational_retrieval_chatbot
+   ```
+
+2. **Create a Virtual Environment**
+
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate   # On Windows use: .venv\Scripts\activate
+   ```
+
+3. **Install Dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Create Environment Variables File**
+
+   - Create a `.env` file in the root directory of your project and add the required environment variables (see the [Environment Variables](#environment-variables) section).
+
+5. **Create Sample Data (Optional)**
+   - Run the provided scripts to create sample files for testing.
+   ```bash
+   python create_sample_data.py
+   python create_sample_docx.py
+   ```
+
+---
+
+### **5. Environment Variables**
+
+The `.env` file is used to securely store environment variables required by the application. Below is the list of environment variables needed:
+
+```
+GROQ_API_KEY=your_groq_api_key
+```
+
+- **`GROQ_API_KEY`**: API key for the Groq model used in LangChain.
+
+Ensure this file is added to your `.gitignore` to prevent it from being uploaded to version control.
+
+---
+
+### **6. File Upload and Processing Workflow**
+
+1. **Upload Files**: The admin uploads files via the `/upload` endpoint. Supported formats include `.pdf`, `.docx`, `.doc`, and `.txt`.
+
+2. **Process Files**: The files are saved temporarily, and the appropriate loader is used to extract text from each file.
+
+3. **Split Text into Chunks**: The extracted text is split into smaller chunks using a text splitter. This step ensures that the text is more manageable for processing.
+
+4. **Generate Embeddings**: The text chunks are converted into embeddings using a pre-trained Hugging Face model (`sentence-transformers/all-MiniLM-L6-v2`).
+
+5. **Store in Vector Database**: The embeddings are stored in a vector database (Chroma) for fast retrieval during conversations.
+
+6. **Create Conversational Chain**: A retrieval-based conversational chain is created using the stored embeddings, enabling the chatbot to fetch relevant information based on user queries.
+
+---
+
+### **7. Chat Workflow**
+
+1. **Receive User Query**: The user sends a message to the `/chat` endpoint.
+
+2. **Retrieve Relevant Chunks**: The system retrieves the most relevant text chunks from the vector database based on the user query.
+
+3. **Generate Response**: The retrieved chunks, along with the conversation history, are passed to the language model (`ChatGroq`) to generate a contextually appropriate response.
+
+4. **Return Response**: The chatbot's response is returned to the user.
+
+---
+
+### **8. API Endpoints**
+
+#### **1. `/upload`**
+
+- **Method**: `POST`
+- **Description**: Uploads documents to be processed and stored in the vector database.
+- **Request**:
+  - Files: Multiple files can be uploaded with the form field name `files[]`.
+- **Response**:
+  - Success: `{"message": "Files processed successfully"}`
+  - Failure: `{"error": "No file part"}` or other relevant error messages.
+- **Example**:
+  ```bash
+  curl -X POST -F 'files[]=@path/to/file.txt' http://localhost:5000/upload
+  ```
+
+#### **2. `/chat`**
+
+- **Method**: `POST`
+- **Description**: Sends a user query to the chatbot and receives a response based on the uploaded documents.
+- **Request**:
+  - JSON: `{"message": "Your question"}`
+- **Response**:
+  - Success: `{"response": "Chatbot's reply"}`
+  - Failure: `{"error": "Please upload documents first"}` or `{"error": "No message provided"}`
+- **Example**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" -d '{"message": "Tell me about World War II"}' http://localhost:5000/chat
+  ```
+
+---
+
+### **9. Testing the Application**
+
+#### **Manual Testing**
+
+1. **Start the Server**:
+
+   ```bash
+   python app.py
+   ```
+
+   - The server will start on `http://localhost:5000`.
+
+2. **Upload Files**:
+
+   - Open your browser or use a tool like Postman or `curl` to upload files via the `/upload` endpoint.
+
+3. **Send Chat Queries**:
+   - Send a POST request to the `/chat` endpoint with your query and receive responses based on the uploaded documents.
+
+#### **Automated Testing**
+
+- Implement unit tests for each endpoint and functionality to ensure robustness. Tools like `unittest`, `pytest`, or `Flask-Testing` can be used.
+
+---
+
+### **10. Troubleshooting**
+
+- **CORS Issues**: Ensure that CORS is enabled via `flask_cors` if you're making cross-origin requests.
+- **Environment Variables Not Loaded**: Verify that the `.env` file is correctly formatted and located in the root directory.
+- **Model Loading Errors**: If the language model (`ChatGroq`) fails to load, check your API key and internet connection.
+- **Memory Issues**: If the application consumes too much memory, consider adjusting the `chunk_size` and `chunk_overlap` in the text splitter or reducing the number of retrieved documents (`k` value).
+
+---
+
+### **11. Conclusion**
+
+This project demonstrates how to build a conversational retrieval chatbot capable of processing and retrieving information from user-uploaded documents. By following this documentation, you should be able to set up, run, and interact with the chatbot, as well as understand the underlying processes and workflows involved.
+
+Feel free to expand upon this project by adding features like advanced NLP processing, more complex retrieval mechanisms, or integrating with different language models and databases.
+
+---
+
+This documentation provides a comprehensive guide from setup to execution, making it easier for anyone to understand and work with the project.

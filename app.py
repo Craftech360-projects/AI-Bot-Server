@@ -361,17 +361,17 @@ def chat():
         # response=''
     else:
         # Process normally if it's not a personality question
-        result = chain({
-            "question": user_input,
-            "chat_history": chat_history
+        # result = chain({
+        #     "question": user_input,
+        #     "chat_history": chat_history
             
-        })
-        print(">>>>>>",result)
-        response = result["answer"]
-        print("response",result)
+        # })
+        # print(">>>>>>",result)
+        # response = result["answer"]
+        # print("response",result)
      
-        # Check if the response is empty or indicates lack of information
-        if not response or "I don't have information about that" or "Based on the provided context, there is no information about" in response:
+        # # Check if the response is empty or indicates lack of information
+        # if not response or "I don't have information about that" or "Based on the provided context, there is no information about" in response:
             # Use Mistral (ChatGroq) to generate a response
             llm = ChatGroq(
                 temperature=0.7,

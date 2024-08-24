@@ -1,4 +1,3 @@
-
 import json
 from flask import Flask, request, jsonify
 import os
@@ -117,7 +116,7 @@ def create_conversational_chain(vector_store):
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         chain_type="stuff",
-        retriever=vector_store.as_retriever(search_kwargs={"k": 4}),
+        retriever=vector_store.as_retriever(search_kwargs={"k": 2}),
         memory=memory
     )
 
@@ -364,21 +363,22 @@ def chat():
         result = chain({
             "question": user_input,
             "chat_history": chat_history
-            
         })
-        print(">>>>>>",result)
+    
         response = result["answer"]
         print("response",result)
      
         # Check if the response is empty or indicates lack of information
-        if not response or "I don't have information about that" or "Based on the provided context, there is no information about" in response:
+       # Check if the response is empty or contains phrases that indicate lack of information
+        if not response.strip() or "I don't have information about that" in response.lower or "Based on the provided context, there is no" in response.lower or "AVM Pendant"in response.lower or " It seems like the user's question is not provided in the context" in response.lower():
+          
             # Use Mistral (ChatGroq) to generate a response
             llm = ChatGroq(
                 temperature=0.7,
                 model_name="mixtral-8x7b-32768",
                 groq_api_key=groq_api_key
             )
-            prompt = f"Provide a brief answer to: {user_input}. Keep it under 100 words., end response something like this, Please let me know if you have any other questions."
+            prompt = f"Provide a brief answer to: {user_input}. Keep it under 100 words. End the response with something like: Please let me know if you have any other questions."
             mistral_response = llm.predict(prompt)
             response = f"{mistral_response}"
         # Adjust the response to reflect the bot's personality and include traits

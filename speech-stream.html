@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deepgram Text-to-Speech Streaming</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+      }
+      #inputContainer {
+        display: flex;
+        width: 80%;
+        max-width: 600px;
+        margin-bottom: 20px;
+      }
+      #textInput {
+        flex-grow: 1;
+        padding: 10px;
+        font-size: 16px;
+      }
+      #sendButton {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="inputContainer">
+      <input
+        type="text"
+        id="textInput"
+        placeholder="Enter text to convert to speech"
+      />
+      <button id="sendButton">Send</button>
+    </div>
+
+    <script>
+      const textInput = document.getElementById("textInput");
+      const sendButton = document.getElementById("sendButton");
+      const DEEPGRAM_API_KEY = "ab763c7874734209d21d838a62804b8119175f0c"; // Replace with your actual API key
+
+      sendButton.addEventListener("click", convertAndPlaySpeech);
+
+      async function convertAndPlaySpeech() {
+        const text = textInput.value.trim();
+        if (!text) {
+          alert("Please enter some text to convert to speech.");
+          return;
+        }
+
+        const url = "https://api.deepgram.com/v1/speak?model=aura-orion-en";
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              Authorization: `Token ${DEEPGRAM_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ text: text }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          const sourceNode = audioContext.createBufferSource();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const audioBuffer = await audioContext.decodeAudioData(
+              value.buffer
+            );
+            sourceNode.buffer = audioBuffer;
+            sourceNode.connect(audioContext.destination);
+            sourceNode.start();
+          }
+        } catch (error) {
+          console.error("Error converting text to speech:", error);
+          alert("Error converting text to speech. Please try again.");
+        }
+      }
+    </script>
+  </body>
+</html>

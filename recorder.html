@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Recorder with Deepgram API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+      }
+      #startButton {
+        font-size: 18px;
+        padding: 15px 30px;
+        cursor: pointer;
+        margin-bottom: 20px;
+      }
+      #transcription {
+        width: 80%;
+        max-width: 600px;
+        height: 200px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="startButton">Start Recording</button>
+    <div id="transcription"></div>
+
+    <script>
+      const startButton = document.getElementById("startButton");
+      const transcriptionDiv = document.getElementById("transcription");
+      let mediaRecorder;
+      let audioChunks = [];
+      let startTime;
+      const MAX_RECORDING_TIME = 30000; // 30 seconds in milliseconds
+      const DEEPGRAM_API_KEY = "ab763c7874734209d21d838a62804b8119175f0c"; // Replace with your actual API key
+
+      startButton.addEventListener("mousedown", startRecording);
+      startButton.addEventListener("mouseup", stopRecording);
+      startButton.addEventListener("mouseleave", stopRecording);
+
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+          startTime = Date.now();
+
+          mediaRecorder.addEventListener("dataavailable", (event) => {
+            audioChunks.push(event.data);
+          });
+
+          mediaRecorder.start();
+          startButton.textContent = "Recording...";
+
+          // Stop recording after 30 seconds
+          setTimeout(() => {
+            if (mediaRecorder.state === "recording") {
+              stopRecording();
+            }
+          }, MAX_RECORDING_TIME);
+        } catch (error) {
+          console.error("Error accessing microphone:", error);
+        }
+      }
+
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+          startButton.textContent = "Start Recording";
+
+          mediaRecorder.addEventListener("stop", () => {
+            const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+            sendAudioToDeepgram(audioBlob);
+          });
+        }
+      }
+
+      async function sendAudioToDeepgram(audioBlob) {
+        const url =
+          "https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true";
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              Authorization: `Token ${DEEPGRAM_API_KEY}`,
+              "Content-Type": "audio/wav",
+            },
+            body: audioBlob,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          displayTranscription(data);
+        } catch (error) {
+          console.error("Error sending audio to Deepgram API:", error);
+          transcriptionDiv.textContent =
+            "Error processing audio. Please try again.";
+        }
+      }
+
+      function displayTranscription(data) {
+        if (
+          data &&
+          data.results &&
+          data.results.channels &&
+          data.results.channels[0].alternatives
+        ) {
+          const transcript =
+            data.results.channels[0].alternatives[0].transcript;
+          transcriptionDiv.textContent = transcript;
+        } else {
+          transcriptionDiv.textContent = "No transcription available.";
+        }
+      }
+    </script>
+  </body>
+</html>

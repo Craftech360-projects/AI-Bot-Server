@@ -319,6 +319,21 @@
         }
       }
 
+      function playAudio(audioData) {
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        audioContext.decodeAudioData(
+          audioData.buffer,
+          (buffer) => {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+          },
+          (err) => console.error("Error decoding audio data", err)
+        );
+      }
+
       function appendMessage(sender, message) {
         const chatContainer = document.getElementById("chat-messages");
         const messageElement = document.createElement("div");
@@ -326,7 +341,7 @@
           "message",
           sender === "user" ? "user-message" : "bot-message"
         );
-        messageElement.innerHTML = message;
+        messageElement.innerHTML = message; // Changed from textContent to innerHTML
         chatContainer.appendChild(messageElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
@@ -334,7 +349,6 @@
       let mediaRecorder;
       let audioChunks = [];
       let isRecording = false;
-      let isPlaying = false;
       const MAX_RECORDING_TIME = 30000; // 30 seconds in milliseconds
 
       function toggleRecording() {
@@ -365,7 +379,6 @@
             .getElementById("voice-input-button")
             .classList.add("recording");
 
-          // Stop recording after 30 seconds
           setTimeout(() => {
             if (isRecording) {
               stopRecording();
@@ -391,46 +404,6 @@
             sendAudioToDeepgram(audioBlob);
           });
         }
-      }
-
-      function playAudio(audioData) {
-        const audioContext = new (window.AudioContext ||
-          window.webkitAudioContext)();
-        audioContext.decodeAudioData(
-          audioData.buffer,
-          (buffer) => {
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioContext.destination);
-
-            // Change button to "Stop Audio" before playing
-            const voiceInputButton =
-              document.getElementById("voice-input-button");
-            voiceInputButton.textContent = "Stop Audio";
-            voiceInputButton.onclick = stopAudio;
-            isPlaying = true;
-
-            source.start(0);
-            source.onended = resetAudioButton;
-          },
-          (err) => console.error("Error decoding audio data", err)
-        );
-      }
-
-      function stopAudio() {
-        // This function will be called when the "Stop Audio" button is clicked
-        if (isPlaying) {
-          // You may need to keep a reference to the audio source to stop it
-          // For now, we'll just reset the button
-          resetAudioButton();
-        }
-      }
-
-      function resetAudioButton() {
-        const voiceInputButton = document.getElementById("voice-input-button");
-        voiceInputButton.textContent = "Voice Input";
-        voiceInputButton.onclick = toggleRecording;
-        isPlaying = false;
       }
 
       async function sendAudioToDeepgram(audioBlob) {

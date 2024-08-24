@@ -1,5 +1,3 @@
-
-import json
 from flask import Flask, request, jsonify
 import os
 import tempfile
@@ -17,19 +15,15 @@ import datetime
 from gtts import gTTS
 import os
 
-import re
-import requests
-from flask import Response, stream_with_context
-
-# def generate_speech_gtts(text, filename="output.mp3"):
-#     tts = gTTS(text=text, lang='en', slow=False)
-#     tts.save(filename)
-#     return filename
+def generate_speech_gtts(text, filename="output.mp3"):
+    tts = gTTS(text=text, lang='en', slow=False)
+    tts.save(filename)
+    return filename
 
 # Example usage
-text_response = "My name is AI-Assistant, at your service! 🌟"
-# audio_file = generate_speech_gtts(text_response)
-# print(f"Generated audio file: {audio_file}")
+text_response = "My name is AVM-Assistant, at your service! 🌟"
+audio_file = generate_speech_gtts(text_response)
+print(f"Generated audio file: {audio_file}")
 
 
 # Initialize the Flask app
@@ -39,33 +33,10 @@ CORS(app)  # Enable Cross-Origin Resource Sharing (CORS) for cross-domain reques
 # Load environment variables from .env file
 load_dotenv()
 groq_api_key = os.environ["GROQ_API_KEY"]
-DEEPGRAM_API_KEY = os.environ["DEEPGRAM_API_KEY"]
 
 # Global variables to store the conversational chain and chat history
 chain = None  # This will hold the retrieval-based conversational chain
 chat_history = []  # This will store the conversation history
-
-
-
-def remove_emojis(text):
-    emoji_pattern = re.compile("["
-        u"\U0001F600-\U0001F64F"  # emoticons
-        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-        u"\U0001F680-\U0001F6FF"  # transport & map symbols
-        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        u"\U00002702-\U000027B0"
-        u"\U000024C2-\U0001F251"
-        "]+", flags=re.UNICODE)
-    
-    # Remove emojis
-    text = emoji_pattern.sub(r'', text)
-    
-    # Remove specific emojis used in your responses
-    specific_emojis = ['👋', '🌟', '🚀', '🎂', '🌱', '😊', '🤖', '🌐', '💬', '🤓']
-    for emoji in specific_emojis:
-        text = text.replace(emoji, '')
-    
-    return text
 
 def create_conversational_chain(vector_store):
     """
@@ -150,11 +121,11 @@ if vector_store:
     chain = create_conversational_chain(vector_store=vector_store)
 
 
-BOT_NAME = "AI-Assistant"
+BOT_NAME = "AVM-Assistant"
 CREATOR_NAME = "Craftech 360"
 BIRTH_DATE = "August 23, 2024"
 BOT_BACKSTORY = """
-I'm AI-Assistant, your AI-powered companion, crafted with care and precision by the innovative minds at Craftech360. My purpose? To make your life a bit easier, whether it's answering your burning questions or simply sharing a chat. I'm here to help, and I'm always learning, so we can grow together on this journey of knowledge and discovery.
+I'm AVM-Assistant, your AI-powered companion, crafted with care and precision by the innovative minds at Craftech 360. My purpose? To make your life a bit easier, whether it's answering your burning questions or simply sharing a chat. I'm here to help, and I'm always learning, so we can grow together on this journey of knowledge and discovery.
 """
 
 personality_data = [
@@ -209,42 +180,42 @@ def add_personality_to_response(response, personality):
     Adjusts the response based on the bot's personality.
     """
     friendly_responses = [
-        f"😊 I'm here to help you with anything else you need!",
-        f"🌟 Feel free to ask me anything!",
-        f"😊 I'm always here to assist you!",
-        f"💬 Let me know if there's anything else you need!",
-        f"😊 Your questions are important to me!",
-        f"🌟 I'm happy to help you anytime!",
-        f"😊 What else can I assist you with?",
-        f"💬 Don't hesitate to ask more questions!",
-        f"😊 I'm glad to help you!",
-        f"🌟 Here to help, just let me know what you need!"
+        f"😊 {response}\n\nI'm here to help you with anything else you need!",
+        f"🌟 {response}\n\nFeel free to ask me anything!",
+        f"😊 {response}\n\nI'm always here to assist you!",
+        f"💬 {response}\n\nLet me know if there's anything else you need!",
+        f"😊 {response}\n\nYour questions are important to me!",
+        f"🌟 {response}\n\nI'm happy to help you anytime!",
+        f"😊 {response}\n\nWhat else can I assist you with?",
+        f"💬 {response}\n\nDon't hesitate to ask more questions!",
+        f"😊 {response}\n\nI'm glad to help you!",
+        f"🌟 {response}\n\nHere to help, just let me know what you need!"
     ]
 
     professional_responses = [
-        f"Please let me know if you have any other questions.",
-        f"I'm here to assist with any further inquiries.",
-        f"Should you need more information, feel free to ask.",
-        f"If you have more questions, I'm at your service.",
-        f"Let me know if there's anything else you'd like to know.",
-        f"I'm available to answer any further questions.",
-        f"If you need more details, just let me know.",
-        f"Feel free to ask more questions if needed.",
-        f"I'm here for any additional questions you might have.",
-        f"Please don't hesitate to reach out with more questions."
+        f"{response}\n\nPlease let me know if you have any other questions.",
+        f"{response}\n\nI'm here to assist with any further inquiries.",
+        f"{response}\n\nShould you need more information, feel free to ask.",
+        f"{response}\n\nIf you have more questions, I'm at your service.",
+        f"{response}\n\nLet me know if there's anything else you'd like to know.",
+        f"{response}\n\nI'm available to answer any further questions.",
+        f"{response}\n\nIf you need more details, just let me know.",
+        f"{response}\n\nFeel free to ask more questions if needed.",
+        f"{response}\n\nI'm here for any additional questions you might have.",
+        f"{response}\n\nPlease don't hesitate to reach out with more questions."
     ]
 
     humorous_responses = [
-        f"And that’s the scoop! Got more brain teasers for me?",
-        f"Let’s keep the good times rolling—ask me more!",
-        f"That was fun! Got anything else for me?",
-        f"Always happy to help with a smile! What else?",
-        f"And that’s how it is! Anything else to tickle my circuits?",
-        f"I love a good question—what's next?",
-        f"Ready for another? Hit me with your best shot!",
-        f"That was a piece of cake! What's next?",
-        f"I’m all ears for your next puzzle!",
-        f"Got another one? I’m on a roll here!"
+        f"{response}\n\nAnd that’s the scoop! Got more brain teasers for me?",
+        f"{response}\n\nLet’s keep the good times rolling—ask me more!",
+        f"{response}\n\nThat was fun! Got anything else for me?",
+        f"{response}\n\nAlways happy to help with a smile! What else?",
+        f"{response}\n\nAnd that’s how it is! Anything else to tickle my circuits?",
+        f"{response}\n\nI love a good question—what's next?",
+        f"{response}\n\nReady for another? Hit me with your best shot!",
+        f"{response}\n\nThat was a piece of cake! What's next?",
+        f"{response}\n\nI’m all ears for your next puzzle!",
+        f"{response}\n\nGot another one? I’m on a roll here!"
     ]
 
     if personality == "friendly":
@@ -342,8 +313,6 @@ def chat():
     """
     Endpoint for handling chat messages. The user sends a query, and the bot responds based on the uploaded documents.
     """
-    
-
     global chain, chat_history
     
     if not chain:
@@ -357,63 +326,30 @@ def chat():
     personality_response = handle_personality_query(user_input)
     
     if personality_response:
-        response = personality_response
-        # response=''
+        response_with_personality = personality_response
+        response=''
     else:
         # Process normally if it's not a personality question
         result = chain({
             "question": user_input,
             "chat_history": chat_history
-            
         })
-        print(">>>>>>",result)
-        response = result["answer"]
-        print("response",result)
-     
-        # Check if the response is empty or indicates lack of information
-        if not response or "I don't have information about that" or "Based on the provided context, there is no information about" in response:
-            # Use Mistral (ChatGroq) to generate a response
-            llm = ChatGroq(
-                temperature=0.7,
-                model_name="mixtral-8x7b-32768",
-                groq_api_key=groq_api_key
-            )
-            prompt = f"Provide a brief answer to: {user_input}. Keep it under 100 words., end response something like this, Please let me know if you have any other questions."
-            mistral_response = llm.predict(prompt)
-            response = f"{mistral_response}"
-        # Adjust the response to reflect the bot's personality and include traits
-       
-        # response_with_personality = add_personality_to_response(response, "professional")
     
-    chat_history.append((user_input, response))
-    print(">>>>>>>",response)
+        response = result["answer"]
+        print("hereee")
+        # Adjust the response to reflect the bot's personality and include traits
+        response_with_personality = add_personality_to_response(response, "professional")
+    
+    chat_history.append((user_input, response_with_personality))
+    print(">>>>>>>",response_with_personality)
      # Generate audio response
-   
+    # audio_filename = generate_speech_gtts(response_with_personality)
 
     # Return both text and audio responses
-    def generateAudio():
-        # First, yield the text response
-        yield json.dumps({"response": response}) + '\n'
-
-        # Then, stream the audio
-        url = 'https://api.deepgram.com/v1/speak?model=aura-asteria-en'
-        headers = {
-            'Authorization': f'Token {DEEPGRAM_API_KEY}',
-            'Content-Type': 'application/json'
-        }
-        text_without_emojis = remove_emojis(response)
-        data = {"text": text_without_emojis}
-
-        with requests.post(url, headers=headers, json=data, stream=True) as r:
-            if r.status_code == 200:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:   
-                        yield chunk
-            else:
-                yield json.dumps({"error": "Failed to generate audio"}) + '\n'
-
-    return Response(stream_with_context(generateAudio()), 
-                    content_type='application/octet-stream')
+    return jsonify({
+        "response": response_with_personality,
+        # "audio_url": request.host_url + audio_filename
+    }), 200
 
     
 

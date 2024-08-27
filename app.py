@@ -160,6 +160,8 @@ I'm AI-Assistant, your AI-powered companion, crafted with care and precision by 
 personality_data = [
     {"question": "hi", "response": "Hello! 👋 How can I assist you today?"},
     {"question": "hello", "response": "Hello! 👋 How can I assist you today?"},
+    {"question": "hello, how are you", "response": "Hello! I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? 🤖"},
+    {"question": "hai, how are you?", "response": "Hai 👋 I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? 🤖"},
     {"question": "hey", "response": "Hello! 👋 How can I assist you today?"},
     {"question": "hai", "response": "Hello! 👋 How can I assist you today?"},
     {"question": "what's up", "response": "Hello! 👋 How can I assist you today?"},
@@ -373,14 +375,28 @@ def chat():
         # # Check if the response is empty or indicates lack of information
         # if not response or "I don't have information about that" or "Based on the provided context, there is no information about" in response:
             # Use Mistral (ChatGroq) to generate a response
-            llm = ChatGroq(
+            
+        professional_responses = [
+        "Please let me know if you have any other questions.",
+        "I'm here to assist with any further inquiries.",
+        "Should you need more information, feel free to ask.",
+        "If you have more questions, I'm at your service.",
+        "Let me know if there's anything else you'd like to know.",
+        "I'm available to answer any further questions.",
+        "If you need more details, just let me know.",
+        "Feel free to ask more questions if needed.",
+        "I'm here for any additional questions you might have.",
+        "Please don't hesitate to reach out with more questions."
+             ]
+        
+        llm = ChatGroq(
                 temperature=0.7,
                 model_name="mixtral-8x7b-32768",
                 groq_api_key=groq_api_key
             )
-            prompt = f"Provide a brief answer to: {user_input}. Keep it under 100 words., end response something like this, Please let me know if you have any other questions."
-            mistral_response = llm.predict(prompt)
-            response = f"{mistral_response}"
+        prompt = f"Provide a brief answer to: {user_input}. Keep it under 100 words., end response something like this,{random.choice(professional_responses)}."
+        mistral_response = llm.predict(prompt)
+        response = f"{mistral_response}"
         # Adjust the response to reflect the bot's personality and include traits
        
         # response_with_personality = add_personality_to_response(response, "professional")
@@ -391,8 +407,31 @@ def chat():
    
 
     # Return both text and audio responses
-    def generateAudio():
-        # First, yield the text response
+    # def generateAudio():
+    #     # First, yield the text response
+    #     yield json.dumps({"response": response}) + '\n'
+
+    #     # Then, stream the audio
+    #     url = 'https://api.deepgram.com/v1/speak?model=aura-asteria-en'
+    #     headers = {
+    #         'Authorization': f'Token {DEEPGRAM_API_KEY}',
+    #         'Content-Type': 'application/json'
+    #     }
+    #     text_without_emojis = remove_emojis(response)
+    #     data = {"text": text_without_emojis}
+
+    #     with requests.post(url, headers=headers, json=data, stream=True) as r:
+    #         if r.status_code == 200:
+    #             for chunk in r.iter_content(chunk_size=8192):
+    #                 if chunk:   
+    #                     yield chunk
+    #         else:
+    #             yield json.dumps({"error": "Failed to generate audio"}) + '\n'
+
+    # return Response(stream_with_context(generateAudio()), 
+    #                 content_type='application/octet-stream')
+    def generate():
+        # First, yield the text response as JSON
         yield json.dumps({"response": response}) + '\n'
 
         # Then, stream the audio
@@ -406,15 +445,16 @@ def chat():
 
         with requests.post(url, headers=headers, json=data, stream=True) as r:
             if r.status_code == 200:
+                yield b'--audio\n'
                 for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:   
+                    if chunk:
                         yield chunk
+                yield b'\n--audio--\n'
             else:
                 yield json.dumps({"error": "Failed to generate audio"}) + '\n'
 
-    return Response(stream_with_context(generateAudio()), 
-                    content_type='application/octet-stream')
-
+    return Response(generate(), 
+                    content_type='multipart/mixed; boundary=audio')
     
 
 if __name__ == '__main__':

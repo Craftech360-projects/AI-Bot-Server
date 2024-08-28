@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 import os
 import tempfile
 import random
+import difflib
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
@@ -21,15 +22,9 @@ import re
 import requests
 from flask import Response, stream_with_context
 
-# def generate_speech_gtts(text, filename="output.mp3"):
-#     tts = gTTS(text=text, lang='en', slow=False)
-#     tts.save(filename)
-#     return filename
 
 # Example usage
 text_response = "My name is AI-Assistant, at your service! 🌟"
-# audio_file = generate_speech_gtts(text_response)
-# print(f"Generated audio file: {audio_file}")
 
 
 # Initialize the Flask app
@@ -123,66 +118,92 @@ def create_conversational_chain(vector_store):
 
     return chain
 
-def load_or_create_vector_store():
-    """
-    Loads the vector store from disk if it exists, otherwise returns None.
-    """
-    embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
+# def load_or_create_vector_store():
+#     """
+#     Loads the vector store from disk if it exists, otherwise returns None.
+#     """
+#     embedding = HuggingFaceEmbeddings(
+#         model_name="sentence-transformers/all-MiniLM-L6-v2",
+#         model_kwargs={"device": "cpu"}
+#     )
     
-    if os.path.exists("chroma_store_groq"):
-        # If the vector store exists, load it (without specifying the embedding model)
-        vector_store = Chroma(
-            persist_directory="chroma_store_groq"
-        )
-        vector_store._embedding_function = embedding  # Set the embedding function explicitly
-        print("Loaded vector store from disk.")
-    else:
-        vector_store = None
-        print("No vector store found. Please upload documents.")
-    return vector_store
+#     if os.path.exists("chroma_store_groq"):
+#         # If the vector store exists, load it (without specifying the embedding model)
+#         vector_store = Chroma(
+#             persist_directory="chroma_store_groq"
+#         )
+#         vector_store._embedding_function = embedding  # Set the embedding function explicitly
+#         print("Loaded vector store from disk.")
+#     else:
+#         vector_store = None
+#         print("No vector store found. Please upload documents.")
+#     return vector_store
 
-# Load the vector store on server startup
-vector_store = load_or_create_vector_store()
-if vector_store:
-    chain = create_conversational_chain(vector_store=vector_store)
+# # Load the vector store on server startup
+# vector_store = load_or_create_vector_store()
+# if vector_store:
+#     chain = create_conversational_chain(vector_store=vector_store)
 
 
-BOT_NAME = "AI-Assistant"
+BOT_NAME = "Zephy"
 CREATOR_NAME = "Craftech 360"
 BIRTH_DATE = "August 23, 2024"
 BOT_BACKSTORY = """
-I'm AI-Assistant, your AI-powered companion, crafted with care and precision by the innovative minds at Craftech360. My purpose? To make your life a bit easier, whether it's answering your burning questions or simply sharing a chat. I'm here to help, and I'm always learning, so we can grow together on this journey of knowledge and discovery.
+I'am Zephy, an AI-Assistant, your AI-powered companion, crafted with care and precision by the innovative minds. My purpose? To make your life a bit easier, whether it's answering your burning questions or simply sharing a chat. I'm here to help, and I'm always learning, so we can grow together on this journey of knowledge and discovery.
 """
 
 personality_data = [
-    {"question": "hi", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "hello", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "hello, how are you", "response": "Hello! I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? 🤖"},
-    {"question": "hai, how are you?", "response": "Hai 👋 I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? 🤖"},
-    {"question": "hey", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "hai", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "what's up", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "whatsup", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "sup", "response": "Hello! 👋 How can I assist you today?"},
-    {"question": "your name", "response": f"My name is {BOT_NAME}, at your service! 🌟"},
-    {"question": "who created you", "response": f"I was brought to life by the creative geniuses at {CREATOR_NAME}, where innovation meets imagination. 🚀"},
-    {"question": "what are you", "response": f"{BOT_BACKSTORY}\nIn short, I'm your digital ally, ready to assist with whatever you need!"},
-    {"question": "what is your purpose", "response": f"{BOT_BACKSTORY}\nIn short, I'm your digital ally, ready to assist with whatever you need!"},
-    {"question": "who are you", "response": f"{BOT_BACKSTORY}\nIn short, I'm your digital ally, ready to assist with whatever you need!"},
-    {"question": "date of birth", "response": f"I was officially launched on {BIRTH_DATE}, so you could say I’m a pretty young AI! 🎂"},
-    {"question": "birthday", "response": f"I was officially launched on {BIRTH_DATE}, so you could say I’m a pretty young AI! 🎂"},
-    {"question": "how old are you", "response": f"I was born on {BIRTH_DATE}, which makes me {datetime.datetime.now().year - int(BIRTH_DATE.split()[-1])} years old in human years. But in AI years, I'm constantly evolving! 🌱"},
-    {"question": "your age", "response": f"I was born on {BIRTH_DATE}, which makes me {datetime.datetime.now().year - int(BIRTH_DATE.split()[-1])} years old in human years. But in AI years, I'm constantly evolving! 🌱"},
-    {"question": "wish", "response": "Thank you! 😊 I appreciate the kind words. Wishing you all the best as well! 🌟"},
-    {"question": "how are you", "response": "I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? 🤖"},
-    {"question": "where do you live", "response": "I live in the digital realm, hosted on servers, but I'm always just a message away from helping you! 🌐"},
-    {"question": "who is your best friend", "response": "My best friend? That would be you, of course! After all, I'm here to help you out whenever you need. 😊"},
-    {"question": "what can you do", "response": "I can assist with answering questions, providing information, and even having a friendly chat! What would you like to do today? 💬"},
-    {"question": "can you do", "response": "I can assist with answering questions, providing information, and even having a friendly chat! What would you like to do today? 💬"},
-    {"question": "do you have a hobby", "response": "As an AI, my hobby is learning new things and helping out! I guess you could say I'm a bit of a workaholic, but I love what I do! 🤓"},
+     {"question": "about deloitte", "response": "Deloitte provides industry-leading audit, consulting, tax and advisory services to many of the world’s most admired brands, including nearly 90% of the Fortune 500®. At Deloitte, we strive to live our purpose of making an impact that matters by creating trust and confidence in a more equitable society. We leverage our unique blend of business acumen, command of technology, and strategic technology alliances to advise our clients across industries as they build their future. Deloitte is proud to be part of the largest global professional services network serving our clients in the markets that are most important to them. Bringing more than 175 years of service, our network of member firms spans more than 150 countries and territories. Learn how Deloitte’s approximately 457,000 people worldwide connect for impact at www.deloitte.com"},
+    
+    {"question": "why it gen ai matters?", "response": "As promising experiments and use cases begin to pay off, it’s clear that we have arrived at a pivotal moment for Generative AI, balancing leaders’ high expectations with challenges such as data quality, investment costs, effective measurement and an evolving regulatory landscape. Now more than ever, change management and deep organizational integration are critical to overcoming barriers, unlocking value and building for the future of Gen AI."},
+    
+    {"question": "share gen ai facts with us", "response": "Here are some Generative AI facts and statistics: 43% of employees across Asia Pacific are using Gen AI for work in 2024; Daily Gen AI users save approximately 6.3 hours per week; Over 11 billion working hours across Asia Pacific will be impacted by AI weekly; 67% of Gen AI users reported improved work or study satisfaction; 60% of students believe Gen AI has influenced their career decisions; Younger workers are twice as likely to use Gen AI compared to older workers."},
+    
+    {"question": "value levers we enable for our clients using gen ai", "response": "Gen AI COE enable Values across Client Business areas for example: Increase revenue generation through hyper personalized marketing for target customers through Content Generation, Increase pace of new product & service development and speedier GTM, Reduce cost around 30% or higher through automating job functions & undertaking job substitutions, Uncover new ideas, insights, questions and generally unleash creativity and much more"},
+    
+   
+    {"question": "gen ai coe", "response": "Deloitte has well established Gen AI COE to align overall vision in order to  realize immediate value, foster accelerated innovation, track the rapidly evolving landscape, provision guardrails for innovation to gain a competitive advantage, and ensure the ethical and responsible use of AI. Deloitte Gen AI COE serves as the nucleus fostering an environment of innovation and ensuring maximum value and impact through 5 Pillars: First One is AI Research Lab: Where innovation meets intelligence: Discover leading-edge insights, leverages deep industry knowledge. Second is AI Institute: A Leading-edge educational institute, rapidly develops new-age digital skills for professionals.Third is AI Enable: that Transform Delivery to creates a profound potential for innovation and optimization across all service lines. Fourth is AI Leap: which Accelerate Go-to-market alignment with strategic partners and rapid development via the AI Enable Incubator. And Lastly is AI Consortium to Shape new businesses and markets with Centralized AI Assets Repository that drive big, bold, globally-impactful play."},
+    
+     {"question": "deloitte gen ai coe capabilities", "response": "At Deloitte we have expertise and understanding which allows us to be a supportive partner to you across your strategy, implementation and monitor Gen AI journey stages with our High quality talent at scale. We have around 37,000+ Global AI, Analytics & Reasoning Talent strength including Semantic Reasoning & Inference, Natural Learning Techniques, Conversational AI professionals and 1200+ Prompt Engineers. Deloitte named a leader in the Worldwide AI Services 2023 Vendor Assessment by IDC – 3 times in a row and has Alliances with leading Gen AI tech players Like nvidia and Google, recognized as a Global Consulting & Service Partner of the year."},
+    
+    {"question": "ai research lab", "response": "From the Market to the Lab, the Deloitte AI Institute leverages deep industry knowledge to lead the AI conversation and uncover insights to make sense of this complex ecosystem. And for the same, Gen AI Research Lab provision 3 main components: First One is Generative AI Insights to explore cutting-edge insights, trends, industry-specific AI use cases, and major studies along with publications that will revolutionize the business. Second is Experience Garage which is Experimental Portal with access of variety of Modals that offers experiencing and experimenting to all with assets like Starter Kit, Templated Use Cases, Fluency Programs and more And Lastly An Incubator to Accelerate and expand Generative AI capabilities, seize the momentum, and provide early-stage proof of concepts"},
+    
+    {"question": "ai institute", "response": "Deloitte’s engine for bridging the AI talent gap by educating way to AI talent growth. The Institute offers AI training programs for all professionals. Programs are categorized into technical and nontechnical, based on each professional's learning objectives. In addition, we provision events, newsletters, hackathons and ideathons, for Generative Learning.  AI Institute has 3 main programs: First One is Learning Pathways, A comprehensive curriculum across business and industries along with innovative learning solutions that enable professionals to create an impact. Second is AI Experiential Learning Program which provision valuable hands-on experience with AI technologies by participating Learning programs, Hackathons, and much more. And Lastly is AI Certification Programs to Empower professionals with certification around AI Automation, Data Engineer, ML Engineer, or Full Stack Developer"},
+    
+    {"question": "ai enable", "response": "As the influence of Generation AI continues to reshape Industry, it’s crucial for organizations to adapt and embrace the rapid advancements in AI technology. The future of work depends on harnessing the power of gen AI in a way that fosters collaboration and innovation. And for the same, AI Enable bring forth 3 Innovative Solutions:.First One is Concept to Activation with Proven methodology to enable deep industry expertise from Ideate, Deliver, and to Scale, to make sense of this complex ecosystem and bridging the ethics gap surrounding AI. Second is Lifecycle Edge AI Platform with capabilities to enable from Knowledge Based Assistance to Action Oriented AI to provision productivity across Software Development Lifecycle. And Lastly is, AI Factory as-a-Service that is one-stop solution for Gen AI, with comprehensive suite of capabilities, delivered with experienced professionals and deep industry experience"},
+    
+    {"question": "ai leap", "response": "AI Leap is a methodology to develop a comprehensive plan to bring Gen AI services and product to market. It is designed to mitigate the risk and provision a Singular One Services to our Clients through 3 Levers: First One is Advisory, A dedicated team that activate value through awareness of potentials, enablement of services, and provision expertise to increase adoption. Second is Sales Excellence Program to develop a roadmap to greatly enhance win rates and collaboration, eliminate obstacles, and streamline our efforts to secure key strategic deals globally. And Lastly is Pursuit Axis for access to sales and business development training, tips, and tools, as well as a central repository for knowledge, resources, and strategies to assist with proposals, meeting, and other client-facing materials"},
+    
+    {"question": "ai consortium", "response": "AI Consortium with 200+ AI Assets across Industry and Business Functions like Financial Services, Technology, Media & Telecom and much more acts as a Single Source for Knowledge management and Assets Repository to help organization improve productivity, retain information, and maximize efficiency with 3 main components: First One is Asset Catalogue a collection of assets across business, industries, and software development lifecycle including Knowledge Based Assistances, Action Oriented AI and much more. Second is AI Ignition, A series of newsletters, videos, and podcasts which illuminate knowledge and ignite the discussion across latest trends in technologies and its potential realization. And Lastly is AI Dossier, A curated selection of Generative AI use cases, videos, and much more aimed at inspiring ideas, uncovering value-driven programs, and guiding organizations toward maximizing the potential"},
+   
+    {"question": "about zephy", "response": f"{BOT_BACKSTORY}. In short, I'm your digital ally, ready to assist with whatever you need!"},
+    
+    {"question": "hi", "response": "Hello!  How can I assist you today?"},
+    {"question": "hello", "response": "Hello!  How can I assist you today?"},
+    {"question": "hello, how are you", "response": "Hello! I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? "},
+    {"question": "hai, how are you?", "response": "Hai  I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? "},
+    {"question": "hey", "response": "Hello!  How can I assist you today?"},
+    {"question": "hai", "response": "Hello!  How can I assist you today?"},
+    {"question": "what's up", "response": "Hello!  How can I assist you today?"},
+    {"question": "whatsup", "response": "Hello!  How can I assist you today?"},
+    {"question": "sup", "response": "Hello!  How can I assist you today?"},
+    {"question": "your name", "response": f"My name is {BOT_NAME}, at your service! "},
+    {"question": "who created you", "response": f"I was brought to life by the creative geniuses at {CREATOR_NAME}, where innovation meets imagination. "},
+    {"question": "what are you", "response": f"{BOT_BACKSTORY}. In short, I'm your digital ally, ready to assist with whatever you need!"},
+    {"question": "what is your purpose", "response": f"{BOT_BACKSTORY}. In short, I'm your digital ally, ready to assist with whatever you need!"},
+    {"question": "who are you", "response": f"{BOT_BACKSTORY}. In short, I'm your digital ally, ready to assist with whatever you need!"},
+    
+    {"question": "date of birth", "response": f"I was officially launched on {BIRTH_DATE}, so you could say I’m a pretty young AI! "},
+    {"question": "birthday", "response": f"I was officially launched on {BIRTH_DATE}, so you could say I’m a pretty young AI! "},
+    {"question": "how old are you", "response": f"I was born on {BIRTH_DATE}, which makes me {datetime.datetime.now().year - int(BIRTH_DATE.split()[-1])} years old in human years. But in AI years, I'm constantly evolving! "},
+    {"question": "your age", "response": f"I was born on {BIRTH_DATE}, which makes me {datetime.datetime.now().year - int(BIRTH_DATE.split()[-1])} years old in human years. But in AI years, I'm constantly evolving! "},
+    {"question": "wish", "response": "Thank you!  I appreciate the kind words. Wishing you all the best as well! "},
+    {"question": "how are you", "response": "I'm just a bunch of code, but thanks for asking! I'm always ready to assist you. How can I help today? "},
+    {"question": "where do you live", "response": "I live in the digital realm, hosted on servers, but I'm always just a message away from helping you! "},
+    {"question": "who is your best friend", "response": "My best friend? That would be you, of course! After all, I'm here to help you out whenever you need. "},
+    {"question": "what can you do", "response": "I can assist with answering questions, providing information, and even having a friendly chat! What would you like to do today? "},
+    {"question": "can you do", "response": "I can assist with answering questions, providing information, and even having a friendly chat! What would you like to do today? "},
+    {"question": "do you have a hobby", "response": "As an AI, my hobby is learning new things and helping out! I guess you could say I'm a bit of a workaholic, but I love what I do! "},
 ]
 
 def handle_personality_query(user_input):
@@ -191,19 +212,53 @@ def handle_personality_query(user_input):
     """
    
     
+    # user_input = user_input.lower()
+    # for item in personality_data:
+    #     if item["question"] in user_input:
+    #         return item["response"]
+    # return None
+
+    # user_inputLower = user_input.lower()
+    # print(">user_inputLower>>",user_inputLower);
+    # for item in personality_data:
+    #   if item["question"].lower() == user_inputLower:
+    #     matched_question = item["question"]
+    #     matched_response = item["response"]
+    #     print(f"Matched question: {matched_question}")
+    #     print(f"Matched response: {matched_response}")
+    #     return item["response"]
+    # return None
     user_input = user_input.lower()
+    
+    # First, try to find an exact match
     for item in personality_data:
-        if item["question"] in user_input:
+        if item["question"].lower() == user_input:
+            print(f"Exact match found: {item['question']}")
             return item["response"]
+    
+    # If no exact match, find the closest match
+    questions = [item["question"].lower() for item in personality_data]
+    closest_match = difflib.get_close_matches(user_input, questions, n=1, cutoff=0.7)  # Adjust cutoff as needed
+
+    if closest_match:
+        for item in personality_data:
+            if item["question"].lower() == closest_match[0]:
+                print(f"Closest match found: {item['question']}")
+                return item["response"]
+    
+    # Fallback response if no close match is found
+    print("No close match found.")
     return None
 
+ # In case no match is found
+
 # Example usage
-user_input = "What is your name?"
-response = handle_personality_query(user_input)
-if response:
-    print(f"Bot: {response}")
-else:
-    print("Bot: I'm not sure how to answer that.")
+# user_input = "About Deloitte"
+# response = handle_personality_query(user_input)
+# if response:
+#     print(f"Bot: {response}")
+# else:
+#     print("Bot: I'm not sure how to answer that.")
     
     
 def add_personality_to_response(response, personality):
@@ -348,10 +403,12 @@ def chat():
 
     global chain, chat_history
     
-    if not chain:
-        return jsonify({"error": "Please upload documents first"}), 400
+    # if not chain:
+    #     return jsonify({"error": "Please upload documents first"}), 400
     
     user_input = request.json.get('message')
+    
+    print("userinputt>>>>",user_input)
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
     
@@ -362,19 +419,7 @@ def chat():
         response = personality_response
         # response=''
     else:
-        # Process normally if it's not a personality question
-        # result = chain({
-        #     "question": user_input,
-        #     "chat_history": chat_history
-            
-        # })
-        # print(">>>>>>",result)
-        # response = result["answer"]
-        # print("response",result)
-     
-        # # Check if the response is empty or indicates lack of information
-        # if not response or "I don't have information about that" or "Based on the provided context, there is no information about" in response:
-            # Use Mistral (ChatGroq) to generate a response
+       
             
         professional_responses = [
         "Please let me know if you have any other questions.",
@@ -394,7 +439,8 @@ def chat():
                 model_name="mixtral-8x7b-32768",
                 groq_api_key=groq_api_key
             )
-        prompt = f"Provide a brief answer to: {user_input}. Keep it under 100 words., end response something like this,{random.choice(professional_responses)}."
+        print("user_input",user_input)
+        prompt = f"Provide a brief answer to: {user_input}. end response something like this,{random.choice(professional_responses)}."
         mistral_response = llm.predict(prompt)
         response = f"{mistral_response}"
         # Adjust the response to reflect the bot's personality and include traits
@@ -404,59 +450,9 @@ def chat():
     chat_history.append((user_input, response))
     print(">>>>>>>",response)
      # Generate audio response
-   
+    return jsonify({"response": response})
 
-    # Return both text and audio responses
-    # def generateAudio():
-    #     # First, yield the text response
-    #     yield json.dumps({"response": response}) + '\n'
-
-    #     # Then, stream the audio
-    #     url = 'https://api.deepgram.com/v1/speak?model=aura-asteria-en'
-    #     headers = {
-    #         'Authorization': f'Token {DEEPGRAM_API_KEY}',
-    #         'Content-Type': 'application/json'
-    #     }
-    #     text_without_emojis = remove_emojis(response)
-    #     data = {"text": text_without_emojis}
-
-    #     with requests.post(url, headers=headers, json=data, stream=True) as r:
-    #         if r.status_code == 200:
-    #             for chunk in r.iter_content(chunk_size=8192):
-    #                 if chunk:   
-    #                     yield chunk
-    #         else:
-    #             yield json.dumps({"error": "Failed to generate audio"}) + '\n'
-
-    # return Response(stream_with_context(generateAudio()), 
-    #                 content_type='application/octet-stream')
-    def generate():
-        # First, yield the text response as JSON
-        yield json.dumps({"response": response}) + '\n'
-
-        # Then, stream the audio
-        url = 'https://api.deepgram.com/v1/speak?model=aura-asteria-en'
-        headers = {
-            'Authorization': f'Token {DEEPGRAM_API_KEY}',
-            'Content-Type': 'application/json'
-        }
-        text_without_emojis = remove_emojis(response)
-        data = {"text": text_without_emojis}
-
-        with requests.post(url, headers=headers, json=data, stream=True) as r:
-            if r.status_code == 200:
-                yield b'--audio\n'
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        yield chunk
-                yield b'\n--audio--\n'
-            else:
-                yield json.dumps({"error": "Failed to generate audio"}) + '\n'
-
-    return Response(generate(), 
-                    content_type='multipart/mixed; boundary=audio')
-    
 
 if __name__ == '__main__':
     # Start the Flask app with debug mode enabled
-    app.run(debug=True)
+     app.run(debug=True) 
